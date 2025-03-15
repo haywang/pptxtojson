@@ -15,14 +15,15 @@ import { findOMath, latexFormart, parseOMath } from './math'
 
 export async function parse(file) {
   const slides = []
-  
+
   const zip = await JSZip.loadAsync(file)
 
   const filesInfo = await getContentTypes(zip)
   const { width, height, defaultTextStyle } = await getSlideInfo(zip)
   const { themeContent, themeColors } = await getTheme(zip)
-
+  console.log('parse function -> ', filesInfo, filesInfo.slides, filesInfo.slides.length)
   for (const filename of filesInfo.slides) {
+    console.log('filename=', filename, 'themeContent=', themeContent, 'defaultTextStyle=', defaultTextStyle)
     const singleSlide = await processSingleSlide(zip, filename, themeContent, defaultTextStyle)
     slides.push(singleSlide)
   }
@@ -54,7 +55,7 @@ async function getContentTypes(zip) {
       default:
     }
   }
-  
+
   const sortSlideXml = (p1, p2) => {
     const n1 = +/(\d+)\.xml/.exec(p1)[1]
     const n2 = +/(\d+)\.xml/.exec(p2)[1]
@@ -62,7 +63,7 @@ async function getContentTypes(zip) {
   }
   slidesLocArray = slidesLocArray.sort(sortSlideXml)
   slideLayoutsLocArray = slideLayoutsLocArray.sort(sortSlideXml)
-  
+
   return {
     slides: slidesLocArray,
     slideLayouts: slideLayoutsLocArray,
@@ -92,7 +93,7 @@ async function getTheme(zip) {
         break
       }
     }
-  } 
+  }
   else if (relationshipArray['attrs']['Type'] === 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme') {
     themeURI = relationshipArray['attrs']['Target']
   }
@@ -117,7 +118,7 @@ async function processSingleSlide(zip, sldFileName, themeContent, defaultTextSty
   const resContent = await readXmlFile(zip, resName)
   let relationshipArray = resContent['Relationships']['Relationship']
   if (relationshipArray.constructor !== Array) relationshipArray = [relationshipArray]
-  
+
   let noteFilename = ''
   let layoutFilename = ''
   let masterFilename = ''
@@ -154,11 +155,12 @@ async function processSingleSlide(zip, sldFileName, themeContent, defaultTextSty
         }
     }
   }
-  
+
   const slideNotesContent = await readXmlFile(zip, noteFilename)
   const note = getNote(slideNotesContent)
 
   const slideLayoutContent = await readXmlFile(zip, layoutFilename)
+  console.log('processSingleSlide', slideLayoutContent, layoutFilename)
   const slideLayoutTables = await indexNodes(slideLayoutContent)
   const slideLayoutResFilename = layoutFilename.replace('slideLayouts/slideLayout', 'slideLayouts/_rels/slideLayout') + '.rels'
   const slideLayoutResContent = await readXmlFile(zip, slideLayoutResFilename)
@@ -318,7 +320,7 @@ async function getLayoutElements(warpObj) {
             if (ret) elements.push(ret)
           }
         }
-      } 
+      }
       else {
         const ph = getTextByPathList(nodesSldLayout[nodeKey], ['p:nvSpPr', 'p:nvPr', 'p:ph'])
         if (!ph) {
@@ -338,7 +340,7 @@ async function getLayoutElements(warpObj) {
             if (ret) elements.push(ret)
           }
         }
-      } 
+      }
       else {
         const ph = getTextByPathList(nodesSldMaster[nodeKey], ['p:nvSpPr', 'p:nvPr', 'p:ph'])
         if (!ph) {
@@ -352,6 +354,7 @@ async function getLayoutElements(warpObj) {
 }
 
 function indexNodes(content) {
+  if (!content) return
   const keys = Object.keys(content)
   const spTreeNode = content[keys[0]]['p:cSld']['p:spTree']
   const idTable = {}
@@ -374,7 +377,7 @@ function indexNodes(content) {
         if (idx) idxTable[idx] = targetNodeItem
         if (type) typeTable[type] = targetNodeItem
       }
-    } 
+    }
     else {
       const nvSpPrNode = targetNode['p:nvSpPr']
       const id = getTextByPathList(nvSpPrNode, ['p:cNvPr', 'attrs', 'id'])
@@ -436,7 +439,7 @@ function processMathNode(node) {
     type: 'math',
     top,
     left,
-    width, 
+    width,
     height,
     latex,
     order,
@@ -507,7 +510,7 @@ async function processSpNode(node, warpObj, source) {
     if (idx) {
       slideLayoutSpNode = warpObj['slideLayoutTables']['typeTable'][type]
       slideMasterSpNode = warpObj['slideMasterTables']['typeTable'][type]
-    } 
+    }
     else {
       slideLayoutSpNode = warpObj['slideLayoutTables']['typeTable'][type]
       slideMasterSpNode = warpObj['slideMasterTables']['typeTable'][type]
@@ -563,7 +566,7 @@ async function genShape(node, slideLayoutSpNode, slideMasterSpNode, name, type, 
   if (txtXframeNode) {
     const txtXframeRot = getTextByPathList(txtXframeNode, ['attrs', 'rot'])
     if (txtXframeRot) txtRotate = angleToDegrees(txtXframeRot) + 90
-  } 
+  }
   else txtRotate = rotate
 
   let content = ''
@@ -637,7 +640,7 @@ async function processPicNode(node, warpObj, source) {
   else resObj = warpObj['slideResObj']
 
   const order = node['attrs']['order']
-  
+
   const rid = node['p:blipFill']['a:blip']['attrs']['r:embed']
   const imgName = resObj[rid]['target']
   const imgFileExt = extractFileExtension(imgName).toLowerCase()
@@ -667,7 +670,7 @@ async function processPicNode(node, warpObj, source) {
     if (isVideoLink(videoFile)) {
       videoFile = escapeHtml(videoFile)
       isVdeoLink = true
-    } 
+    }
     else {
       videoFileExt = extractFileExtension(videoFile).toLowerCase()
       if (videoFileExt === 'mp4' || videoFileExt === 'webm' || videoFileExt === 'ogg') {
@@ -697,19 +700,19 @@ async function processPicNode(node, warpObj, source) {
       type: 'video',
       top,
       left,
-      width, 
+      width,
       height,
       rotate,
       blob: videoBlob,
       order,
     }
-  } 
+  }
   if (videoNode && isVdeoLink) {
     return {
       type: 'video',
       top,
       left,
-      width, 
+      width,
       height,
       rotate,
       src: videoFile,
@@ -721,7 +724,7 @@ async function processPicNode(node, warpObj, source) {
       type: 'audio',
       top,
       left,
-      width, 
+      width,
       height,
       rotate,
       blob: audioBlob,
@@ -732,7 +735,7 @@ async function processPicNode(node, warpObj, source) {
     type: 'image',
     top,
     left,
-    width, 
+    width,
     height,
     rotate,
     src,
@@ -744,7 +747,7 @@ async function processPicNode(node, warpObj, source) {
 
 async function processGraphicFrameNode(node, warpObj, source) {
   const graphicTypeUri = getTextByPathList(node, ['a:graphic', 'a:graphicData', 'attrs', 'uri'])
-  
+
   let result
   switch (graphicTypeUri) {
     case 'http://schemas.openxmlformats.org/drawingml/2006/table':
@@ -801,7 +804,7 @@ async function genTable(node, warpObj) {
             thisTblStyle = tbleStylList[k]
           }
         }
-      } 
+      }
       else {
         if (tbleStylList['attrs']['styleId'] === tbleStyleId) {
           thisTblStyle = tbleStylList
@@ -831,7 +834,7 @@ async function genTable(node, warpObj) {
 
   let trNodes = tableNode['a:tr']
   if (trNodes.constructor !== Array) trNodes = [trNodes]
-  
+
   const data = []
   for (let i = 0; i < trNodes.length; i++) {
     const trNode = trNodes[i]
@@ -853,12 +856,12 @@ async function genTable(node, warpObj) {
           a_sorce = 'a:firstCol'
           if (tblStylAttrObj['isLstRowAttr'] === 1 && i === (trNodes.length - 1) && getTextByPathList(thisTblStyle, ['a:seCell'])) {
             a_sorce = 'a:seCell'
-          } 
+          }
           else if (tblStylAttrObj['isFrstRowAttr'] === 1 && i === 0 &&
             getTextByPathList(thisTblStyle, ['a:neCell'])) {
             a_sorce = 'a:neCell'
           }
-        } 
+        }
         else if (
           (j > 0 && tblStylAttrObj['isBandColAttr'] === 1) &&
           !(tblStylAttrObj['isFrstColAttr'] === 1 && i === 0) &&
@@ -870,7 +873,7 @@ async function genTable(node, warpObj) {
             if (aBandNode === undefined) {
               aBandNode = getTextByPathList(thisTblStyle, ['a:band1V'])
               if (aBandNode) a_sorce = 'a:band2V'
-            } 
+            }
             else a_sorce = 'a:band2V'
           }
         }
@@ -878,7 +881,7 @@ async function genTable(node, warpObj) {
           a_sorce = 'a:lastCol'
           if (tblStylAttrObj['isLstRowAttr'] === 1 && i === (trNodes.length - 1) && getTextByPathList(thisTblStyle, ['a:swCell'])) {
             a_sorce = 'a:swCell'
-          } 
+          }
           else if (tblStylAttrObj['isFrstRowAttr'] === 1 && i === 0 && getTextByPathList(thisTblStyle, ['a:nwCell'])) {
             a_sorce = 'a:nwCell'
           }
@@ -896,18 +899,18 @@ async function genTable(node, warpObj) {
 
         tr.push(td)
       }
-    } 
+    }
     else {
       let a_sorce
       if (tblStylAttrObj['isFrstColAttr'] === 1 && tblStylAttrObj['isLstRowAttr'] !== 1) {
         a_sorce = 'a:firstCol'
-      } 
+      }
       else if (tblStylAttrObj['isBandColAttr'] === 1 && tblStylAttrObj['isLstRowAttr'] !== 1) {
         let aBandNode = getTextByPathList(thisTblStyle, ['a:band2V'])
         if (!aBandNode) {
           aBandNode = getTextByPathList(thisTblStyle, ['a:band1V'])
           if (aBandNode) a_sorce = 'a:band2V'
-        } 
+        }
         else a_sorce = 'a:band2V'
       }
       if (tblStylAttrObj['isLstColAttr'] === 1 && tblStylAttrObj['isLstRowAttr'] !== 1) {
@@ -982,7 +985,7 @@ async function genDiagram(node, warpObj) {
   const xfrmNode = getTextByPathList(node, ['p:xfrm'])
   const { left, top } = getPosition(xfrmNode, undefined, undefined)
   const { width, height } = getSize(xfrmNode, undefined, undefined)
-  
+
   const dgmDrwSpArray = getTextByPathList(warpObj['digramFileContent'], ['p:drawing', 'p:spTree', 'p:sp'])
   const elements = []
   if (dgmDrwSpArray) {

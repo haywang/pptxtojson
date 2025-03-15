@@ -19,7 +19,7 @@ export function simplifyLostLess(children, parentAttributes = {}) {
     if (!out[child.tagName]) out[child.tagName] = []
 
     const kids = simplifyLostLess(child.children || [], child.attributes)
-    
+
     if (typeof kids === 'object') {
       if (!kids.attrs) kids.attrs = { order: cust_attr_order++ }
       else kids.attrs.order = cust_attr_order++
@@ -38,10 +38,15 @@ export function simplifyLostLess(children, parentAttributes = {}) {
 
 export async function readXmlFile(zip, filename) {
   try {
+    console.warn('readXmlFile', filename)
     const data = await zip.file(filename).async('string')
-    return simplifyLostLess(txml.parse(data))
+    const parsed = txml.parse(data)
+    const simplified = simplifyLostLess(parsed)
+    console.log('data=', data, 'parsed=', parsed, 'simplified=', simplified)
+    return simplified
   }
-  catch {
+  catch(e) {
+    console.error('Error reading XML file:', JSON.stringifye)
     return null
   }
 }
