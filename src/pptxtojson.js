@@ -14,14 +14,19 @@ import { RATIO_EMUs_Points } from './constants'
 import { findOMath, latexFormart, parseOMath } from './math'
 
 export async function parse(file) {
+  console.warn('1 -> parse()')
   const slides = []
 
   const zip = await JSZip.loadAsync(file)
 
+  console.log('zip=', zip)
+
   const filesInfo = await getContentTypes(zip)
   const { width, height, defaultTextStyle } = await getSlideInfo(zip)
   const { themeContent, themeColors } = await getTheme(zip)
+  console.log('width=', width, 'height=', height, 'defaultTextStyle=', defaultTextStyle, 'themeContent=', themeContent, 'themeColors=', themeColors)
   console.log('parse function -> ', filesInfo, filesInfo.slides, filesInfo.slides.length)
+
   for (const filename of filesInfo.slides) {
     console.log('filename=', filename, 'themeContent=', themeContent, 'defaultTextStyle=', defaultTextStyle)
     const singleSlide = await processSingleSlide(zip, filename, themeContent, defaultTextStyle)
@@ -82,10 +87,11 @@ async function getSlideInfo(zip) {
 }
 
 async function getTheme(zip) {
+  console.warn('2 -> getTheme()')
   const preResContent = await readXmlFile(zip, 'ppt/_rels/presentation.xml.rels')
   const relationshipArray = preResContent['Relationships']['Relationship']
   let themeURI
-
+  console.log('relationshipArray=', relationshipArray)
   if (relationshipArray.constructor === Array) {
     for (const relationshipItem of relationshipArray) {
       if (relationshipItem['attrs']['Type'] === 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme') {
@@ -97,6 +103,7 @@ async function getTheme(zip) {
   else if (relationshipArray['attrs']['Type'] === 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme') {
     themeURI = relationshipArray['attrs']['Target']
   }
+  console.log('themeURI=', themeURI)
 
   const themeContent = await readXmlFile(zip, 'ppt/' + themeURI)
 
@@ -114,9 +121,12 @@ async function getTheme(zip) {
 }
 
 async function processSingleSlide(zip, sldFileName, themeContent, defaultTextStyle) {
+  console.warn('2 -> processSingleSlide()')
+  console.log('sldFileName=', sldFileName, 'themeContent=', themeContent, 'defaultTextStyle=', defaultTextStyle)
   const resName = sldFileName.replace('slides/slide', 'slides/_rels/slide') + '.rels'
   const resContent = await readXmlFile(zip, resName)
   let relationshipArray = resContent['Relationships']['Relationship']
+  console.log('processSingleSlide -> relationshipArray=', relationshipArray)
   if (relationshipArray.constructor !== Array) relationshipArray = [relationshipArray]
 
   let noteFilename = ''
@@ -131,6 +141,7 @@ async function processSingleSlide(zip, sldFileName, themeContent, defaultTextSty
   const diagramResObj = {}
 
   for (const relationshipArrayItem of relationshipArray) {
+    console.log('relationshipArrayItem=', relationshipArrayItem['attrs']['Target'])
     switch (relationshipArrayItem['attrs']['Type']) {
       case 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout':
         layoutFilename = relationshipArrayItem['attrs']['Target'].replace('../', 'ppt/')
@@ -204,6 +215,7 @@ async function processSingleSlide(zip, sldFileName, themeContent, defaultTextSty
   if (themeFilename) {
     const themeName = themeFilename.split('/').pop()
     const themeResFileName = themeFilename.replace(themeName, '_rels/' + themeName) + '.rels'
+    // todo: can't read themeResFileName
     const themeResContent = await readXmlFile(zip, themeResFileName)
     if (themeResContent) {
       relationshipArray = themeResContent['Relationships']['Relationship']
@@ -274,6 +286,8 @@ async function processSingleSlide(zip, sldFileName, themeContent, defaultTextSty
       if (ret) elements.push(ret)
     }
   }
+
+  console.log('\nsplit line\n')
 
   return {
     fill,
@@ -354,7 +368,6 @@ async function getLayoutElements(warpObj) {
 }
 
 function indexNodes(content) {
-  if (!content) return
   const keys = Object.keys(content)
   const spTreeNode = content[keys[0]]['p:cSld']['p:spTree']
   const idTable = {}
