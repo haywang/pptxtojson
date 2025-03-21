@@ -1,0 +1,33 @@
+name: Publish NPM Package
+
+on:
+  push:
+    branches:
+      - master  # 仅在推送到 main 分支时触发
+  release:
+    types: [created]  # 也可以在创建新 Release 时触发
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          registry-url: "https://registry.npmjs.org/"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build package
+        run: npm run build  # 如果你的包需要构建
+
+      - name: Publish to NPM
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
