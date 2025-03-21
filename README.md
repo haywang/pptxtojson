@@ -32,7 +32,7 @@ import { parse } from 'pptxtojson'
 
 document.querySelector('input').addEventListener('change', evt => {
 	const file = evt.target.files[0]
-	
+
 	const reader = new FileReader()
 	reader.onload = async e => {
 		const json = await parse(e.target.result)
@@ -231,10 +231,3 @@ document.querySelector('input').addEventListener('change', evt => {
 
 # 📄 开源协议
 MIT License | Copyright © 2020-PRESENT [pipipi-pikachu](https://github.com/pipipi-pikachu)
-
-# ☕ 打赏
-如果该项目帮到了您，还请您不吝打赏！
-
-<p align="left">
-    <img src='/dist/wx.png' />
-</p>
