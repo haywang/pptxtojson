@@ -1,5 +1,5 @@
 {
-	"name": "pptxtojson",
+	"name": "@haywang/pptxtojson",
 	"version": "1.2.0",
 	"description": "A javascript tool for parsing .pptx file",
 	"type": "module",
@@ -11,17 +11,17 @@
 		"dev": "rollup -c -w",
 		"lint": "eslint src --ext .js,.jsx,.ts,.tsx"
 	},
-	"author": "pipipi_pikachu@163.com",
+	"author": "Austin",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/pipipi-pikachu/pptxtojson"
+		"url": "https://github.com/haywang/pptxtojson"
 	},
 	"keywords": [
 		"ppt",
 		"pptx",
 		"json"
 	],
-	"homepage": "https://github.com/pipipi-pikachu/pptxtojson",
+	"homepage": "https://github.com/haywang/pptxtojson",
 	"license": "MIT",
 	"publishConfig": {
 		"registry": "https://registry.npmjs.com"
